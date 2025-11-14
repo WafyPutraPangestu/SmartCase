@@ -4,11 +4,6 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegistrasiController;
 use Illuminate\Support\Facades\Route;
 
-
-Route::get('/', function () {
-    return view('home');
+Route::middleware(['user'])->group(function () {
+    
 });
-
-foreach (glob(__DIR__ . '/web/*.php') as $routeFile) {
-    require $routeFile;
-}
