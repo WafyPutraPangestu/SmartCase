@@ -3,63 +3,62 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\KategoriGangguan;
 use Illuminate\Http\Request;
 
 class GangguanController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $kategori = KategoriGangguan::all();
+        return view('admin.kategori-gangguan.index', compact('kategori'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return view('admin.kategori-gangguan.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'nama_gangguan' => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
+        ]);
+
+        KategoriGangguan::create($request->all());
+
+        return redirect()->route('kategori_gangguan.index')
+                         ->with('success', 'Kategori berhasil dibuat');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(KategoriGangguan $kategoriGangguan)
     {
-        //
+        return view('admin.kategori-gangguan.show', compact('kategoriGangguan'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function edit(KategoriGangguan $kategoriGangguan)
     {
-        //
+        return view('admin.kategori-gangguan.edit', compact('kategoriGangguan'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(Request $request, KategoriGangguan $kategoriGangguan)
     {
-        //
+        $request->validate([
+            'nama_gangguan' => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
+        ]);
+
+        $kategoriGangguan->update($request->all());
+
+        return redirect()->route('admin.kategori-gangguan.index')
+                         ->with('success', 'Kategori berhasil diupdate');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(KategoriGangguan $kategoriGangguan)
     {
-        //
+        $kategoriGangguan->delete();
+        return redirect()->route('admin.kategori-gangguan.index')
+                         ->with('success', 'Kategori berhasil dihapus');
     }
 }

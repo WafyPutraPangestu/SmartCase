@@ -9,7 +9,7 @@ class KategoriGangguan extends Model
 {
     use HasFactory;
 
-    protected $table = 'kategori_gangguan';
+    protected $table = 'kategori_gangguans';
     protected $fillable = ['nama_gangguan', 'deskripsi'];
 
     public function tickets()

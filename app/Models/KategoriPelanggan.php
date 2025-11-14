@@ -9,7 +9,7 @@ class KategoriPelanggan extends Model
 {
     use HasFactory;
 
-    protected $table = 'kategori_pelanggan';
+    protected $table = 'kategori_pelanggans';
     protected $fillable = ['nama_kategori'];
 
     public function profiles()

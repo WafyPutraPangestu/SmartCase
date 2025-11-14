@@ -9,6 +9,7 @@
         <a href="/">Home</a>
         @can('admin')
         <a href="/about">About</a>
+        <a href="{{ route('kategori_gangguan.index') }}">Kategori Gangguan</a>
         @endcan
         @can('user')
         <a href="/contact">Contact</a>
