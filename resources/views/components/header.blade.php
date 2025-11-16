@@ -8,11 +8,13 @@
         
         <a href="/">Home</a>
         @can('admin')
-        <a href="/about">About</a>
+       
         <a href="{{ route('kategori_gangguan.index') }}">Kategori Gangguan</a>
+        <a href="{{ route('kategori_pelanggan.index') }}">Kategori Pelanggan</a>
+        <a href="{{ route('admin.tiket.index') }}">Manajemen Tiket</a>
         @endcan
         @can('user')
-        <a href="/contact">Contact</a>
+        <a href="{{ route('tiket.index') }}">Tiket Saya</a>
         @endcan
     </div>
 @guest 

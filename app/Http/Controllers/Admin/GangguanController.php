@@ -51,14 +51,14 @@ class GangguanController extends Controller
 
         $kategoriGangguan->update($request->all());
 
-        return redirect()->route('admin.kategori-gangguan.index')
+        return redirect()->route('kategori_gangguan.index')
                          ->with('success', 'Kategori berhasil diupdate');
     }
 
     public function destroy(KategoriGangguan $kategoriGangguan)
     {
         $kategoriGangguan->delete();
-        return redirect()->route('admin.kategori-gangguan.index')
+        return redirect()->route('kategori_gangguan.index')
                          ->with('success', 'Kategori berhasil dihapus');
     }
 }

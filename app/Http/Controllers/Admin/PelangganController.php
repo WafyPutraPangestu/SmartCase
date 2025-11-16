@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\KategoriPelanggan;
 use Illuminate\Http\Request;
 
 class PelangganController extends Controller
@@ -12,7 +13,8 @@ class PelangganController extends Controller
      */
     public function index()
     {
-        //
+        $kategoriPelanggans = KategoriPelanggan::latest()->paginate(10);
+        return view('admin.kategori-pelanggan.index', compact('kategoriPelanggans'));
     }
 
     /**
@@ -20,7 +22,7 @@ class PelangganController extends Controller
      */
     public function create()
     {
-        //
+        return view('admin.kategori-pelanggan.create');
     }
 
     /**
@@ -28,7 +30,14 @@ class PelangganController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'nama_kategori' => 'required|string|max:255|unique:kategori_pelanggans,nama_kategori',
+        ]);
+
+        KategoriPelanggan::create($validated);
+
+        return redirect()->route('kategori_pelanggan.index')
+            ->with('success', 'Kategori Pelanggan berhasil ditambahkan.');
     }
 
     /**
@@ -36,7 +45,8 @@ class PelangganController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $kategori = KategoriPelanggan::findOrFail($id);
+        return view('admin.kategori-pelanggan.show', compact('kategori'));
     }
 
     /**
@@ -44,7 +54,8 @@ class PelangganController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $kategori = KategoriPelanggan::findOrFail($id);
+        return view('admin.kategori-pelanggan.edit', compact('kategori'));
     }
 
     /**
@@ -52,7 +63,16 @@ class PelangganController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $kategori = KategoriPelanggan::findOrFail($id);
+
+        $validated = $request->validate([
+            'nama_kategori' => 'required|string|max:255|unique:kategori_pelanggans,nama_kategori,' . $kategori->id,
+        ]);
+
+        $kategori->update($validated);
+
+        return redirect()->route('kategori_pelanggan.index')
+            ->with('success', 'Kategori Pelanggan berhasil diperbarui.');
     }
 
     /**
@@ -60,6 +80,10 @@ class PelangganController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $kategori = KategoriPelanggan::findOrFail($id);
+        $kategori->delete();
+
+        return redirect()->route('kategori_pelanggan.index')
+            ->with('success', 'Kategori Pelanggan berhasil dihapus.');
     }
 }

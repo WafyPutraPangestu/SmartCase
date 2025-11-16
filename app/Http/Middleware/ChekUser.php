@@ -16,7 +16,7 @@ class ChekUser
     {
         // Pastikan sudah login
         if (!Auth::check()) {
-            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+            return redirect()->route('login.index')->with('error', 'Silakan login terlebih dahulu.');
         }
 
         // Cek role user
