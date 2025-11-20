@@ -20,12 +20,7 @@
         <label>Deskripsi</label>
         <textarea name="deskripsi" required>{{ $ticket->deskripsi }}</textarea>
 
-        <label>Prioritas</label>
-        <select name="prioritas">
-            <option value="Rendah" {{ $ticket->prioritas == 'Rendah' ? 'selected' : '' }}>Rendah</option>
-            <option value="Sedang" {{ $ticket->prioritas == 'Sedang' ? 'selected' : '' }}>Sedang</option>
-            <option value="Tinggi" {{ $ticket->prioritas == 'Tinggi' ? 'selected' : '' }}>Tinggi</option>
-        </select>
+        {{-- PRIORITAS DIHAPUS --}}
 
         <button type="submit">Update</button>
     </form>

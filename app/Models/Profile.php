@@ -16,6 +16,7 @@ class Profile extends Model
         'no_telepon',
     ];
 
+    
     public function user()
     {
         return $this->belongsTo(User::class);

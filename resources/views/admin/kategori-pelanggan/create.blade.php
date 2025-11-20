@@ -1,23 +1,263 @@
 <x-layout>
-    <h1>Tambah Kategori Pelanggan</h1>
+    <div class="container mx-auto p-6 max-w-2xl" x-data="{ 
+        showConfirmModal: false,
+        showErrorModal: {{ $errors->any() ? 'true' : 'false' }},
+        submitForm() {
+            this.$refs.mainForm.submit();
+        }
+    }">
+        <!-- Breadcrumb -->
+        <nav class="flex mb-6" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="{{ route('kategori_pelanggan.index') }}" 
+                       class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-primary-600">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                        </svg>
+                        Daftar Kategori
+                    </a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">Tambah Baru</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
 
-    @if($errors->any())
-        <div class="alert alert-danger">
-            <ul>
-                @foreach($errors->all() as $error)
-                   <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+        <!-- Header -->
+        <div class="mb-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h1 class="text-3xl font-bold text-gray-900">Tambah Kategori Pelanggan</h1>
+                    <p class="text-gray-600 mt-1">Isi formulir di bawah untuk menambahkan kategori pelanggan baru</p>
+                </div>
+            </div>
         </div>
-    @endif
 
-    <form action="{{ route('kategori_pelanggan.store') }}" method="POST">
-        @csrf
-        <div class="mb-3">
-            <label for="nama_kategori" class="form-label">Nama Kategori</label>
-            <input type="text" class="form-control" name="nama_kategori" value="{{ old('nama_kategori') }}" required>
+        <!-- Error Modal -->
+        <div x-show="showErrorModal" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 overflow-y-auto"
+             style="display: none;">
+            <div class="flex items-center justify-center min-h-screen px-4">
+                <div class="fixed inset-0 bg-gray-900 bg-opacity-50" 
+                     @click="showErrorModal = false"></div>
+                
+                <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 transform scale-90"
+                     x-transition:enter-end="opacity-100 transform scale-100">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-danger-100 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-danger-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <h3 class="ml-4 text-lg font-semibold text-gray-900">Terdapat Kesalahan</h3>
+                    </div>
+                    <div class="text-gray-600 mb-6">
+                        <p class="mb-2">Mohon perbaiki kesalahan berikut:</p>
+                        <ul class="list-disc list-inside space-y-1 text-sm">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <button @click="showErrorModal = false" 
+                            class="btn btn-danger w-full">
+                        Tutup
+                    </button>
+                </div>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary">Simpan</button>
-        <a href="{{ route('kategori_pelanggan.index') }}" class="btn btn-secondary">Kembali</a>
-    </form>
+
+        <!-- Confirmation Modal -->
+        <div x-show="showConfirmModal" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 overflow-y-auto"
+             style="display: none;">
+            <div class="flex items-center justify-center min-h-screen px-4">
+                <div class="fixed inset-0 bg-gray-900 bg-opacity-50" 
+                     @click="showConfirmModal = false"></div>
+                
+                <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 transform scale-90"
+                     x-transition:enter-end="opacity-100 transform scale-100">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="ml-4 text-lg font-semibold text-gray-900">Konfirmasi Simpan</h3>
+                    </div>
+                    <p class="text-gray-600 mb-6">Apakah Anda yakin ingin menyimpan kategori pelanggan ini?</p>
+                    <div class="flex space-x-3">
+                        <button @click="showConfirmModal = false" 
+                                type="button"
+                                class="btn btn-outline flex-1">
+                            Batal
+                        </button>
+                        <button @click="submitForm()" 
+                                type="button"
+                                class="btn btn-primary flex-1">
+                            Ya, Simpan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-lg font-semibold text-gray-900">Informasi Kategori</h2>
+            </div>
+            
+            <form x-ref="mainForm" 
+                  action="{{ route('kategori_pelanggan.store') }}" 
+                  method="POST" 
+                  @submit.prevent="showConfirmModal = true">
+                @csrf
+
+                <div class="card-body space-y-6">
+                    <!-- Nama Kategori Field -->
+                    <div>
+                        <label class="form-label">
+                            Nama Kategori
+                            <span class="text-danger-500">*</span>
+                        </label>
+                        <input type="text" 
+                               name="nama_kategori" 
+                               class="form-input @error('nama_kategori') !border-danger-500 @enderror" 
+                               value="{{ old('nama_kategori') }}"
+                               placeholder="Contoh: Pelanggan Premium"
+                               required>
+                        @error('nama_kategori')
+                            <p class="form-error">
+                                <svg class="inline w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                        <p class="text-sm text-gray-500 mt-1">Masukkan nama kategori pelanggan yang jelas dan mudah dipahami</p>
+                    </div>
+
+                    <!-- Info Box -->
+                    <div class="alert alert-info">
+                        <div class="flex">
+                            <svg class="w-5 h-5 text-primary-600 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="font-medium">Tips Pengisian:</p>
+                                <ul class="mt-2 text-sm space-y-1">
+                                    <li>• Gunakan nama yang deskriptif (contoh: "VIP", "Regular", "Corporate")</li>
+                                    <li>• Hindari karakter khusus yang tidak perlu</li>
+                                    <li>• Pastikan nama kategori tidak duplikat</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Examples Box -->
+                    <div class="card bg-gray-50">
+                        <div class="card-body">
+                            <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                </svg>
+                                Contoh Kategori Pelanggan
+                            </h3>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <span class="badge badge-primary mr-2">1</span>
+                                    Pelanggan VIP
+                                </div>
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <span class="badge badge-primary mr-2">2</span>
+                                    Pelanggan Premium
+                                </div>
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <span class="badge badge-primary mr-2">3</span>
+                                    Pelanggan Regular
+                                </div>
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <span class="badge badge-primary mr-2">4</span>
+                                    Pelanggan Corporate
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="flex justify-between items-center">
+                        <a href="{{ route('kategori_pelanggan.index') }}" 
+                           class="inline-flex items-center text-gray-600 hover:text-gray-900 transition">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                            Kembali ke Daftar
+                        </a>
+                        <div class="flex space-x-3">
+                            <button type="reset" 
+                                    class="btn btn-outline">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                Reset
+                            </button>
+                            <button type="submit" 
+                                    class="btn btn-primary">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Simpan Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Help Card -->
+        <div class="mt-6 card bg-gray-50">
+            <div class="card-body">
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-primary-600 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-2">Butuh Bantuan?</h3>
+                        <p class="text-sm text-gray-600">
+                            Jika Anda mengalami kesulitan dalam mengisi formulir ini, silakan hubungi administrator sistem atau baca panduan penggunaan aplikasi.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </x-layout>

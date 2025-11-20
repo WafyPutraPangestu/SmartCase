@@ -12,11 +12,20 @@ class Ticket extends Model
     protected $fillable = [
         'user_id',
         'kategori_gangguan_id',
+        'kategori_gangguan_nama',    
+        'kategori_pelanggan_nama',   
         'judul',
         'deskripsi',
         'prioritas',
-        'confidence',
+        'ml_confidence',              
+        'ml_features',                
+        'ml_predicted_at',            
         'status',
+    ];
+    protected $casts = [
+        'ml_features' => 'array',
+        'ml_predicted_at' => 'datetime',
+        'ml_confidence' => 'float',
     ];
 
     public function user()
