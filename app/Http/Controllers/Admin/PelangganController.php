@@ -32,6 +32,9 @@ class PelangganController extends Controller
     {
         $validated = $request->validate([
             'nama_kategori' => 'required|string|max:255|unique:kategori_pelanggans,nama_kategori',
+        ], [
+            'nama_kategori.required' => 'Nama Kategori Pelanggan wajib diisi.',
+            'nama_kategori.unique' => 'Nama Kategori Pelanggan sudah ada.',
         ]);
 
         KategoriPelanggan::create($validated);

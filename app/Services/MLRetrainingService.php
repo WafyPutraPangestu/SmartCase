@@ -21,7 +21,6 @@ class MLRetrainingService
     {
         $this->mlServiceUrl = env('ML_SERVICE_URL');
         $this->apiKey = env('ML_API_KEY');
-        
     }
 
     /**
@@ -34,23 +33,23 @@ class MLRetrainingService
         // Get counter from cache
         $counter = Cache::get('ml_retrain_counter', 0);
         $counter++;
-        
+
         Log::info("ML Retrain Counter: {$counter}/{$this->retrainThreshold}");
-        
+
         // Update counter
         Cache::put('ml_retrain_counter', $counter, now()->addDays(30));
-        
+
         // Check if threshold reached
         if ($counter >= $this->retrainThreshold) {
             Log::info("🎯 Threshold reached! Triggering ML retrain...");
-            
+
             // Export data & trigger retrain
             $this->exportAndRetrain();
-            
+
             // Reset counter
             Cache::put('ml_retrain_counter', 0, now()->addDays(30));
             Cache::put('ml_last_retrain', now(), now()->addDays(30));
-            
+
             Log::info("✅ ML retrain triggered, counter reset");
         }
     }
@@ -79,7 +78,7 @@ class MLRetrainingService
 
             // Build CSV content
             $csvContent = "judul,deskripsi,kategori_gangguan,kategori_pelanggan,waktu_lapor,prioritas\n";
-            
+
             foreach ($tickets as $ticket) {
                 $csvContent .= $this->escapeCSV($ticket->judul) . ","
                     . $this->escapeCSV($ticket->deskripsi) . ","
@@ -100,7 +99,6 @@ class MLRetrainingService
 
             // Trigger retrain via API
             $this->triggerRetrain();
-
         } catch (\Exception $e) {
             Log::error("Export & retrain failed: " . $e->getMessage(), [
                 'exception' => $e
@@ -122,15 +120,15 @@ class MLRetrainingService
 
         // Remove newlines
         $value = str_replace(["\r", "\n"], ' ', $value);
-        
+
         // Escape quotes
         $value = str_replace('"', '""', $value);
-        
+
         // Wrap in quotes if contains comma or quote
         if (strpos($value, ',') !== false || strpos($value, '"') !== false) {
             $value = '"' . $value . '"';
         }
-        
+
         return $value;
     }
 
@@ -144,8 +142,12 @@ class MLRetrainingService
     {
         // Path ke ML dataset folder
         // Sesuaikan dengan struktur folder kamu
-        $mlDatasetPath = base_path('../ml-apps/dataset/training_data.csv');
-        
+        $mlDatasetPath = env('ML_DATASET_PATH');
+        if (empty($mlDatasetPath)) {
+            Log::error("❌ ML_DATASET_PATH belum diatur di file .env");
+            return;
+        }
+
         try {
             if (file_exists(dirname($mlDatasetPath))) {
                 if (copy($csvPath, $mlDatasetPath)) {
@@ -183,7 +185,6 @@ class MLRetrainingService
                     'body' => $response->body()
                 ]);
             }
-
         } catch (\Exception $e) {
             Log::error("Failed to call ML retrain API: " . $e->getMessage());
         }
@@ -199,10 +200,10 @@ class MLRetrainingService
         Log::info("Manual retrain triggered by admin", [
             'admin_id' => Auth::id()
         ]);
-        
+
         try {
             $this->exportAndRetrain();
-            
+
             return [
                 'success' => true,
                 'message' => 'Model retraining started',
@@ -211,7 +212,7 @@ class MLRetrainingService
             ];
         } catch (\Exception $e) {
             Log::error("Manual retrain failed: " . $e->getMessage());
-            
+
             return [
                 'success' => false,
                 'message' => 'Failed to start retraining',
@@ -235,7 +236,6 @@ class MLRetrainingService
                 ->get("{$this->mlServiceUrl}/retrain/status");
 
             $modelStatus = $response->successful() ? $response->json() : null;
-
         } catch (\Exception $e) {
             $modelStatus = [
                 'error' => 'Cannot connect to ML service',
