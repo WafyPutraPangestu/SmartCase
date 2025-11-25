@@ -13,7 +13,8 @@ class Ticket extends Model
         'user_id',
         'kategori_gangguan_id',
         'kategori_gangguan_nama',    
-        'kategori_pelanggan_nama',   
+        'kategori_pelanggan_nama', 
+        'kode_tiket',  
         'judul',
         'deskripsi',
         'prioritas',
@@ -37,4 +38,24 @@ class Ticket extends Model
     {
         return $this->belongsTo(KategoriGangguan::class);
     }
+    // Di dalam class Ticket, tambahkan method ini:
+
+protected static function boot()
+{
+    parent::boot();
+    
+    static::creating(function ($ticket) {
+        if (empty($ticket->kode_tiket)) {
+            $ticket->kode_tiket = self::generateKodeTiket();
+        }
+    });
+}
+
+private static function generateKodeTiket()
+{
+    $lastTicket = self::orderBy('id', 'desc')->first();
+    $nextId = $lastTicket ? $lastTicket->id + 1 : 1;
+    
+    return 'TKT-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+}
 }

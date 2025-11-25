@@ -36,65 +36,84 @@ class TiketController extends Controller
     public function create()
     {
         $kategoriGangguan = KategoriGangguan::all();
+        $user = Auth::user();
+        if (!$user->profile || is_null($user->profile->kategori_pelanggan_id)) {
+            return redirect()->route('profile.index') 
+                ->with('error', 'Mohon lengkapi Kategori Pelanggan di menu Profil sebelum membuat tiket.');
+        }
         return view('user.tiket.create', compact('kategoriGangguan'));
     }
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'kategori_gangguan_id' => 'required|exists:kategori_gangguans,id',
-            'judul' => 'required|string|max:255',
-            'deskripsi' => 'required|string',
+{
+    $user = Auth::user();
+        if (!$user->profile || is_null($user->profile->kategori_pelanggan_id)) {
+            return redirect()->route('profile.index')
+                ->with('error', 'Gagal membuat tiket. Kategori Pelanggan belum diatur.');
+        }
+
+    $validated = $request->validate([
+        'kategori_gangguan' => 'required|string|max:30',
+        'judul' => 'required|string|max:255',
+        'deskripsi' => 'required|string',
+    ]);
+
+    try {
+        
+        $kategoriInput = trim($request->kategori_gangguan);
+        $kategoriNormalized = ucwords(strtolower($kategoriInput));
+
+        
+        $kategori = KategoriGangguan::firstOrCreate([
+            'nama_gangguan' => $kategoriNormalized
+        ]);
+        $payloadML = [
+            'kategori_gangguan' => $kategoriNormalized, 
+            'judul' => $validated['judul'],
+            'deskripsi' => $validated['deskripsi'],
+        ];
+
+        $prediction = $this->mlService->predictPriority($payloadML, Auth::user());
+
+        if (!$prediction['success']) {
+            throw new \Exception($prediction['message']);
+        }
+
+        
+        $ticket = Ticket::create([
+            'user_id' => Auth::id(),
+            'kategori_gangguan_id' => $kategori->id,
+            'kategori_gangguan_nama' => $prediction['kategori_gangguan_nama'],
+            'kategori_pelanggan_nama' => $prediction['kategori_pelanggan_nama'],
+            'judul' => $validated['judul'],
+            'deskripsi' => $validated['deskripsi'],
+            'prioritas' => $prediction['prioritas'],
+            'ml_confidence' => $prediction['confidence'],
+            'ml_predicted_at' => now(),
+            'ml_features' => $prediction['ml_features'] ?? null,
+            'status' => 'Menunggu',
         ]);
 
-        try {
-            // ✨ Get ML prediction
-            $prediction = $this->mlService->predictPriority($validated, Auth::user());
+        
+        $this->retrainService->checkAndTriggerRetrain();
 
-            // Create ticket dengan ML prediction
-            $ticket = Ticket::create([
-                'user_id' => Auth::id(),
-                'kategori_gangguan_id' => $validated['kategori_gangguan_id'],
-                'kategori_gangguan_nama' => $prediction['kategori_gangguan_nama'],
-                'kategori_pelanggan_nama' => $prediction['kategori_pelanggan_nama'],
-                'judul' => $validated['judul'],
-                'deskripsi' => $validated['deskripsi'],
-                'prioritas' => $prediction['prioritas'],
-                'ml_confidence' => $prediction['confidence'],
-                'ml_predicted_at' => $prediction['ml_predicted_at'],
-                'ml_features' => $prediction['ml_features'] ?? null,
-                'status' => 'Menunggu',
-            ]);
+        $message = "Tiket berhasil dibuat dengan prioritas: {$prediction['prioritas']} ";
+        $message .= "(Confidence: " . round($prediction['confidence'] * 100, 1) . "%)";
 
-            // ✨ Check auto-retrain (every 500 tickets)
-            $this->retrainService->checkAndTriggerRetrain();
+        return redirect()->route('tiket.index')->with('success', $message);
 
-            // Flash message dengan info ML
-            $message = "Tiket berhasil dibuat dengan prioritas: {$prediction['prioritas']} ";
-            $message .= "(Confidence: " . round($prediction['confidence'] * 100, 1) . "%)";
+    } catch (\Exception $e) {
 
-            return redirect()->route('tiket.index')->with('success', $message);
+        Log::error('ML Prediction failed in TiketController', [
+            'error' => $e->getMessage(),
+            'user_id' => Auth::id(),
+        ]);
 
-        } catch (\Exception $e) {
-            Log::error('ML Prediction failed in TiketController', [
-                'error' => $e->getMessage(),
-                'user_id' => Auth::id(),
-            ]);
-
-            // Fallback: create ticket tanpa ML (manual prioritas nanti oleh admin)
-            $ticket = Ticket::create([
-                'user_id' => Auth::id(),
-                'kategori_gangguan_id' => $validated['kategori_gangguan_id'],
-                'judul' => $validated['judul'],
-                'deskripsi' => $validated['deskripsi'],
-                'prioritas' => 'Sedang', // Default fallback
-                'status' => 'Menunggu',
-            ]);
-
-            return redirect()->route('tiket.index')
-                ->with('warning', 'Tiket berhasil dibuat. Prioritas akan ditentukan oleh admin.');
-        }
+        return redirect()->back()
+            ->withInput()
+            ->with('error', 'Gagal membuat tiket karena layanan AI sedang offline. Silakan coba lagi nanti.');
     }
+}
 
     public function show($id)
     {
@@ -122,41 +141,77 @@ class TiketController extends Controller
         $ticket = Ticket::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
-
-        $request->validate([
-            'kategori_gangguan_id' => 'required|exists:kategori_gangguans,id',
+    
+        $validated = $request->validate([
+            'kategori_gangguan' => 'required|string|max:30',
             'judul' => 'required|string|max:255',
             'deskripsi' => 'required|string',
         ]);
-
-        // Update ticket basic info
-        $ticket->update([
-            'kategori_gangguan_id' => $request->kategori_gangguan_id,
-            'judul' => $request->judul,
-            'deskripsi' => $request->deskripsi,
-        ]);
-
-        // ✨ Optional: Re-predict jika data berubah signifikan
-        // (Uncomment jika mau auto re-predict saat edit)
-        /*
+    
         try {
-            $prediction = $this->mlService->predictPriority([
-                'kategori_gangguan_id' => $request->kategori_gangguan_id,
-                'judul' => $request->judul,
-                'deskripsi' => $request->deskripsi,
-            ], Auth::user());
-
-            $ticket->update([
-                'prioritas' => $prediction['prioritas'],
-                'ml_confidence' => $prediction['confidence'],
-                'ml_predicted_at' => now(),
+            
+            $kategoriNormalized = ucwords(strtolower(trim($request->kategori_gangguan)));
+    
+            
+            $kategori = KategoriGangguan::firstOrCreate([
+                'nama_gangguan' => $kategoriNormalized
             ]);
+    
+            
+            $payloadML = [
+                'kategori_gangguan' => $kategoriNormalized,
+                'judul' => $validated['judul'],
+                'deskripsi' => $validated['deskripsi'],
+            ];
+    
+            $prediction = $this->mlService->predictPriority($payloadML, Auth::user());
+    
+            if (!$prediction['success']) {
+                throw new \Exception($prediction['message'] ?? 'ML prediction failed');
+            }
+    
+            
+            $updateData = [
+                'kategori_gangguan_id' => $kategori->id,
+                'judul' => $validated['judul'],
+                'deskripsi' => $validated['deskripsi'],
+                'prioritas' => $prediction['prioritas'],
+                'ml_confidence' => $prediction['confidence'] ?? null,
+                'ml_predicted_at' => now(),
+            ];
+    
+            
+            if (isset($prediction['kategori_gangguan_nama'])) {
+                $updateData['kategori_gangguan_nama'] = $prediction['kategori_gangguan_nama'];
+            }
+            if (isset($prediction['kategori_pelanggan_nama'])) {
+                $updateData['kategori_pelanggan_nama'] = $prediction['kategori_pelanggan_nama'];
+            }
+            if (isset($prediction['ml_features'])) {
+                $updateData['ml_features'] = $prediction['ml_features'];
+            }
+    
+            $ticket->update($updateData);
+    
+            $message = "Tiket berhasil diperbarui dengan prioritas: {$prediction['prioritas']}";
+            if (isset($prediction['confidence'])) {
+                $message .= " (Confidence: " . round($prediction['confidence'] * 100, 1) . "%)";
+            }
+    
+            return redirect()->route('tiket.index')->with('success', $message);
+    
         } catch (\Exception $e) {
-            // Ignore ML error on update
+    
+            Log::error('ML Prediction failed in TiketController@update', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'ticket_id' => $id,
+            ]);
+    
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Gagal memperbarui tiket karena layanan AI sedang offline. Silakan coba lagi nanti.');
         }
-        */
-
-        return redirect()->route('tiket.index')->with('success', 'Tiket berhasil diperbarui.');
     }
 
     public function destroy($id)

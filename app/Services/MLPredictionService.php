@@ -23,7 +23,7 @@ class MLPredictionService
     /**
      * Predict ticket priority using ML model
      * 
-     * @param array $ticketData ['kategori_gangguan_id', 'judul', 'deskripsi']
+     * @param array $ticketData ['kategori_gangguan' => nama OR 'kategori_gangguan_id' => id, 'judul', 'deskripsi']
      * @param User $user
      * @return array
      */
@@ -31,17 +31,26 @@ class MLPredictionService
     {
         try {
             // Validate input
-            if (!isset($ticketData['kategori_gangguan_id']) || 
-                !isset($ticketData['judul']) || 
-                !isset($ticketData['deskripsi'])) {
+            if (!isset($ticketData['judul']) || !isset($ticketData['deskripsi'])) {
                 throw new \Exception('Data tiket tidak lengkap');
             }
 
-            // Get kategori gangguan
-            $kategoriGangguan = KategoriGangguan::find($ticketData['kategori_gangguan_id']);
+            // Get kategori gangguan - support both ID and nama
+            $kategoriGangguan = null;
+            
+            if (isset($ticketData['kategori_gangguan_id'])) {
+                // Legacy: by ID
+                $kategoriGangguan = KategoriGangguan::find($ticketData['kategori_gangguan_id']);
+            } elseif (isset($ticketData['kategori_gangguan'])) {
+                // New: by nama (string)
+                $namaNormalized = ucwords(strtolower(trim($ticketData['kategori_gangguan'])));
+                $kategoriGangguan = KategoriGangguan::firstOrCreate([
+                    'nama_gangguan' => $namaNormalized
+                ]);
+            }
             
             if (!$kategoriGangguan) {
-                throw new \Exception('Kategori gangguan tidak ditemukan');
+                throw new \Exception('Kategori gangguan tidak ditemukan atau tidak valid');
             }
 
             // Check if user has profile
@@ -106,32 +115,60 @@ class MLPredictionService
 
             throw new \Exception('ML service returned error: ' . $response->body());
 
-        } catch (\Exception $e) {
-            Log::error('ML Prediction Failed', [
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('ML API unreachable', [
                 'error' => $e->getMessage(),
                 'ticket_data' => $ticketData,
-                'user_id' => $user->id,
-                'has_profile' => $user->profile !== null,
-                'has_kategori_pelanggan' => $user->profile?->kategori_pelanggan_id !== null,
+                'user_id' => $user->id
             ]);
-
-            // Fallback to rule-based prediction
+        
+            return [
+                'success' => false,
+                'error_type' => 'API_UNREACHABLE',
+                'message' => 'AI gagal memprediksikan karena layanan sedang tidak aktif.',
+            ];
+        
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            Log::error('ML API request error', [
+                'error' => $e->getMessage(),
+                'ticket_data' => $ticketData,
+                'user_id' => $user->id
+            ]);
+        
+            return [
+                'success' => false,
+                'error_type' => 'API_REQUEST_ERROR',
+                'message' => 'API gagal terhubung. Silakan coba beberapa saat lagi.',
+            ];
+        
+        } catch (\Exception $e) {
+            Log::error('ML Prediction Failed - using fallback', [
+                'error' => $e->getMessage(),
+                'ticket_data' => $ticketData,
+                'user_id' => $user->id
+            ]);
+        
             return $this->fallbackPrediction($ticketData, $user);
         }
     }
 
     /**
      * Fallback rule-based prediction when ML service unavailable
-     * 
-     * @param array $ticketData
-     * @param User $user
-     * @return array
      */
     private function fallbackPrediction(array $ticketData, User $user): array
     {
         Log::warning('Using fallback prediction (rule-based)');
 
-        $kategoriGangguan = KategoriGangguan::find($ticketData['kategori_gangguan_id']);
+        // Get kategori gangguan - support both ID and nama
+        $kategoriGangguan = null;
+        
+        if (isset($ticketData['kategori_gangguan_id'])) {
+            $kategoriGangguan = KategoriGangguan::find($ticketData['kategori_gangguan_id']);
+        } elseif (isset($ticketData['kategori_gangguan'])) {
+            $namaNormalized = ucwords(strtolower(trim($ticketData['kategori_gangguan'])));
+            $kategoriGangguan = KategoriGangguan::where('nama_gangguan', $namaNormalized)->first();
+        }
+
         $kategoriPelanggan = $user->profile?->kategoriPelanggan;
         
         $prioritas = 'Rendah'; // Default
@@ -166,13 +203,13 @@ class MLPredictionService
         }
         
         return [
-            'success' => false,
+            'success' => true, // Changed to true so controller doesn't throw
             'prioritas' => $prioritas,
-            'confidence' => 0.50, // Low confidence for fallback
+            'confidence' => 0.50,
             'kategori_gangguan_nama' => $kategoriGangguan?->nama_gangguan ?? 'Unknown',
             'kategori_pelanggan_nama' => $kategoriPelanggan?->nama_kategori ?? 'Unknown',
             'is_confident' => false,
-            'needs_review' => true, // Always need review for fallback
+            'needs_review' => true,
             'ml_predicted_at' => now(),
             'ml_features' => [
                 'fallback' => true,
@@ -187,8 +224,6 @@ class MLPredictionService
 
     /**
      * Check ML service health
-     * 
-     * @return array
      */
     public function checkHealth(): array
     {
@@ -214,8 +249,6 @@ class MLPredictionService
 
     /**
      * Get ML service status
-     * 
-     * @return array
      */
     public function getMLStatus(): array
     {

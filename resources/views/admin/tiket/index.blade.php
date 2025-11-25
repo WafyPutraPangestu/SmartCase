@@ -8,7 +8,7 @@
         <!-- Header Section -->
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">Manajemen Tiket</h1>
+                <h1 class="text-3xl font-bold text-gray-900">Dashboard Tiket</h1>
                 <p class="text-gray-600 mt-1">Kelola dan monitor semua tiket pelanggan</p>
             </div>
             <div class="flex space-x-3">
@@ -143,7 +143,7 @@
                         </svg>
                         <input type="text" 
                                x-model="searchQuery" 
-                               placeholder="Cari tiket..." 
+                               placeholder="Cari tiket atau kode..." 
                                class="form-input w-64">
                     </div>
                 </div>
@@ -159,8 +159,8 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                                ID
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Kode Tiket
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Judul Tiket
@@ -170,6 +170,9 @@
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Kategori
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Prioritas
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
@@ -184,10 +187,22 @@
                             <tr class="hover:bg-gray-50 transition"
                                 x-show="(filterStatus === 'all' || '{{ $t->status }}' === filterStatus) && 
                                         ('{{ strtolower($t->judul) }}'.includes(searchQuery.toLowerCase()) || 
+                                         '{{ strtolower($t->kode_tiket) }}'.includes(searchQuery.toLowerCase()) ||
                                          '{{ strtolower($t->user->name) }}'.includes(searchQuery.toLowerCase()))">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <span class="badge badge-primary">#{{ $t->id }}</span>
+                                
+                                <!-- Kode Tiket -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm font-mono font-semibold border border-gray-300">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                                            </svg>
+                                            {{ $t->kode_tiket }}
+                                        </span>
+                                    </div>
                                 </td>
+
+                                <!-- Judul -->
                                 <td class="px-6 py-4">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -201,6 +216,8 @@
                                         </div>
                                     </div>
                                 </td>
+
+                                <!-- Pelanggan -->
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 w-8 h-8 rounded-full bg-secondary-100 flex items-center justify-center">
@@ -214,11 +231,40 @@
                                         </div>
                                     </div>
                                 </td>
+
+                                <!-- Kategori -->
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="badge badge-warning">
-                                        {{ $t->kategoriGangguan->nama_gangguan ?? '-' }}
+                                    <span class="badge badge-warning text-xs">
+                                        {{ $t->kategori_gangguan_nama ?? '-' }}
                                     </span>
                                 </td>
+
+                                <!-- Prioritas -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($t->prioritas)
+                                        @php
+                                            $priorityColors = [
+                                                'Rendah' => 'badge-secondary',
+                                                'Sedang' => 'badge-warning',
+                                                'Tinggi' => 'badge-danger'
+                                            ];
+                                        @endphp
+                                        <div class="flex items-center gap-1">
+                                            <span class="badge {{ $priorityColors[$t->prioritas] ?? 'badge-secondary' }} text-xs">
+                                                {{ $t->prioritas }}
+                                            </span>
+                                            @if($t->ml_confidence)
+                                                <span class="text-xs text-gray-500" title="AI Confidence">
+                                                    ({{ round($t->ml_confidence * 100) }}%)
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @endif
+                                </td>
+
+                                <!-- Status -->
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div x-data="{status: '{{ $t->status }}', loading: false}">
                                         <select 
@@ -238,7 +284,7 @@
                                                 .then(res => res.json())
                                                 .then(data => {
                                                     loading = false;
-                                                    successMessage = 'Status tiket berhasil diperbarui menjadi ' + status;
+                                                    successMessage = 'Status tiket ' + '{{ $t->kode_tiket }}' + ' berhasil diperbarui menjadi ' + status;
                                                     showSuccessModal = true;
                                                     setTimeout(() => location.reload(), 1500);
                                                 })
@@ -262,6 +308,8 @@
                                         </div>
                                     </div>
                                 </td>
+
+                                <!-- Aksi -->
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                     <a href="{{ route('admin.tiket.show', $t->id) }}" 
                                        class="inline-flex items-center px-3 py-1 bg-primary-50 text-primary-700 rounded hover:bg-primary-100 transition">
@@ -275,7 +323,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
+                                <td colspan="7" class="px-6 py-12 text-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>

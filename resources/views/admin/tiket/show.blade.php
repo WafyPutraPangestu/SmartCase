@@ -1,7 +1,9 @@
 <x-layout>
     <div class="container mx-auto p-6 max-w-5xl" x-data="{ 
         showStatusModal: false,
+        showPrioritasModal: false,
         newStatus: '{{ $tiket->status }}',
+        newPrioritas: '{{ $tiket->prioritas ?? 'Rendah' }}',
         updateStatus() {
             fetch('{{ route('admin.tiket.updateStatus', $tiket->id) }}', {
                 method: 'PUT',
@@ -17,13 +19,29 @@
                 this.showStatusModal = false;
                 location.reload();
             });
+        },
+        updatePrioritas() {
+            fetch('{{ route('admin.tiket.updatePrioritasApi', $tiket->id) }}', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({prioritas: this.newPrioritas})
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.showPrioritasModal = false;
+                location.reload();
+            });
         }
     }">
         <!-- Breadcrumb -->
         <nav class="flex mb-6" aria-label="Breadcrumb">
             <ol class="inline-flex items-center space-x-1 md:space-x-3">
                 <li class="inline-flex items-center">
-                    <a href="{{ route('tiket.index') }}" 
+                    <a href="{{ route('admin.tiket.index') }}" 
                        class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-primary-600">
                         <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
@@ -36,7 +54,7 @@
                         <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
                         </svg>
-                        <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">Detail Tiket</span>
+                        <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">{{ $tiket->kode_tiket }}</span>
                     </div>
                 </li>
             </ol>
@@ -57,7 +75,14 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <span class="badge badge-primary text-base px-4 py-2">ID: #{{ $tiket->id }}</span>
+                    <!-- Kode Tiket Badge -->
+                    <span class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300">
+                        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                        </svg>
+                        <span class="text-lg font-bold font-mono text-gray-900">{{ $tiket->kode_tiket }}</span>
+                    </span>
+                    
                     @php
                         $statusColors = [
                             'Menunggu' => 'badge-warning',
@@ -122,6 +147,62 @@
             </div>
         </div>
 
+        <!-- Prioritas Update Modal -->
+        <div x-show="showPrioritasModal" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 overflow-y-auto"
+             style="display: none;">
+            <div class="flex items-center justify-center min-h-screen px-4">
+                <div class="fixed inset-0 bg-gray-900 bg-opacity-50" 
+                     @click="showPrioritasModal = false"></div>
+                
+                <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 transform scale-90"
+                     x-transition:enter-end="opacity-100 transform scale-100">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="ml-4 text-lg font-semibold text-gray-900">Override Prioritas AI</h3>
+                    </div>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600">Prioritas saat ini (AI): <strong>{{ $tiket->prioritas ?? 'Tidak ada' }}</strong></p>
+                        @if($tiket->ml_confidence)
+                        <p class="text-xs text-gray-500">Confidence: {{ round($tiket->ml_confidence * 100, 1) }}%</p>
+                        @endif
+                    </div>
+                    <div class="mb-6">
+                        <label class="form-label">Pilih Prioritas Baru:</label>
+                        <select x-model="newPrioritas" class="form-input">
+                            <option value="Rendah">Rendah</option>
+                            <option value="Sedang">Sedang</option>
+                            <option value="Tinggi">Tinggi</option>
+                        </select>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button @click="showPrioritasModal = false" 
+                                type="button"
+                                class="btn btn-outline flex-1">
+                            Batal
+                        </button>
+                        <button @click="updatePrioritas()" 
+                                type="button"
+                                class="btn btn-primary flex-1">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Main Content -->
             <div class="lg:col-span-2 space-y-6">
@@ -157,25 +238,49 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                                         </svg>
                                         <span class="font-medium text-gray-900">
-                                            {{ $tiket->kategoriGangguan->nama_gangguan ?? '-' }}
+                                            {{ $tiket->kategori_gangguan_nama ?? '-' }}
                                         </span>
                                     </div>
                                 </div>
                             </div>
                             <div>
                                 <label class="form-label mb-2">Prioritas (AI)</label>
-                                <div class="p-4 bg-secondary-50 rounded-lg border border-secondary-200">
-                                    <div class="flex items-center">
-                                        <svg class="w-5 h-5 text-secondary-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                        </svg>
-                                        <span class="font-medium text-gray-900">
-                                            {{ $tiket->prioritas ?? 'Tidak ada' }}
+                                <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                            </svg>
+                                            <span class="font-medium text-gray-900">
+                                                {{ $tiket->prioritas ?? 'Tidak ada' }}
+                                            </span>
+                                        </div>
+                                        @if($tiket->ml_confidence)
+                                        <span class="text-xs text-purple-600 font-semibold">
+                                            {{ round($tiket->ml_confidence * 100, 1) }}%
                                         </span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Kategori Pelanggan (if available) -->
+                        @if($tiket->kategori_pelanggan_nama)
+                        <div>
+                            <label class="form-label mb-2">Kategori Pelanggan</label>
+                            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="font-medium text-gray-900">
+                                        {{ $tiket->kategori_pelanggan_nama }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
                     </div>
                 </div>
 
@@ -265,6 +370,14 @@
                             Update Status
                         </button>
 
+                        <button @click="showPrioritasModal = true" 
+                                class="btn btn-warning w-full">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            Override Prioritas
+                        </button>
+
                         <div class="border-t border-gray-200 my-4"></div>
 
                         <a href="{{ route('admin.tiket.index') }}" 
@@ -317,7 +430,11 @@
                     </div>
                     <div class="card-body space-y-3">
                         <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                            <span class="text-sm text-gray-600">ID Tiket</span>
+                            <span class="text-sm text-gray-600">Kode Tiket</span>
+                            <span class="font-semibold font-mono text-gray-900">{{ $tiket->kode_tiket }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-sm text-gray-600">ID Database</span>
                             <span class="font-semibold text-gray-900">#{{ $tiket->id }}</span>
                         </div>
                         <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">

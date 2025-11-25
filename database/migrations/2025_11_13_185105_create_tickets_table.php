@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('kategori_gangguan_id')->nullable()->constrained()->onDelete('set null');                        
             $table->string('kategori_gangguan_nama')->nullable();
             $table->string('kategori_pelanggan_nama')->nullable();
+            $table->string('kode_tiket')->unique();
             $table->string('judul');
             $table->text('deskripsi');
             $table->enum('prioritas', ['Rendah', 'Sedang', 'Tinggi'])->nullable();

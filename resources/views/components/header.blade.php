@@ -10,7 +10,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl font-bold">Smart Case</h1>
+                    <h1 class="text-xl font-bold">ARNET</h1>
                 </a>
             </div>
 
@@ -21,6 +21,9 @@
                 </a>
                 
                 @can('admin')
+                <a href="{{ route('admin.dashboard.index') }}" class="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors duration-200 font-medium">
+                    Dashboard Admin
+                </a>
                 <a href="{{ route('kategori_gangguan.index') }}" class="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors duration-200 font-medium">
                     Kategori Gangguan
                 </a>
@@ -28,13 +31,16 @@
                     Kategori Pelanggan
                 </a>
                 <a href="{{ route('admin.tiket.index') }}" class="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors duration-200 font-medium">
-                    Manajemen Tiket
+                    Dashboard Tiket
                 </a>
                 @endcan
 
                 @can('user')
-                <a href="{{ route('tiket.index') }}" class="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors duration-200 font-medium">
-                    Tiket Saya
+                <a href="{{ route('dashboard.index') }}" class="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors duration-200 font-medium">
+                    Dashboard Tiket
+                </a>
+                <a href="{{ route('tiket.create') }}" class="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors duration-200 font-medium">
+                    Buat Tiket
                 </a>
                 @endcan
             </div>
@@ -138,7 +144,7 @@
                 Kategori Pelanggan
             </a>
             <a href="{{ route('admin.tiket.index') }}" class="block px-4 py-2 rounded-lg hover:bg-white/10 transition-colors duration-200">
-                Manajemen Tiket
+                Dashboard Tiket
             </a>
             @endcan
 

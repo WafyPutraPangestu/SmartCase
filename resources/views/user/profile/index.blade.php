@@ -18,10 +18,6 @@
             <div class="card-header">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <!-- Avatar -->
-                        {{-- <div class="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md">
-                            <span x-text="name.charAt(0).toUpperCase()"></span>
-                        </div> --}}
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
                                 Profile Saya
@@ -57,7 +53,7 @@
                 <div class="relative">
                     <!-- Lock Overlay -->
                     <div x-show="isLocked" 
-                         class="absolute inset-0  z-10 rounded-lg cursor-not-allowed"
+                         class="absolute inset-0 z-10 rounded-lg cursor-not-allowed"
                          title="Klik 'Edit Profile' untuk mengubah data">
                     </div>
 
@@ -126,16 +122,29 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                                 </svg>
                                 Kategori Pelanggan
+                                <span class="text-red-500">*</span>
+                                <span class="text-xs text-gray-500">(Wajib untuk membuat tiket)</span>
                             </label>
                             <select 
                                 :disabled="isLocked"
-                                class="form-input"
+                                class="form-input transition-all duration-200"
+                                :class="{ 
+                                    'border-red-300 focus:border-red-400 focus:ring-red-200': errors.kategori_pelanggan_id,
+                                    'border-green-300 bg-green-50': !isLocked && kategori_pelanggan_id
+                                }"
                                 x-model="kategori_pelanggan_id">
                                 <option value="">-- Pilih Kategori --</option>
                                 @foreach ($kategoriPelanggan as $kp)
                                     <option value="{{ $kp->id }}">{{ $kp->nama_kategori }}</option>
                                 @endforeach
                             </select>
+                            <p x-show="errors.kategori_pelanggan_id" x-text="errors.kategori_pelanggan_id" class="form-error"></p>
+                            <p x-show="!isLocked && kategori_pelanggan_id" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Kategori sudah dipilih
+                            </p>
                         </div>
 
                         <!-- Alamat (Full Width) -->
@@ -209,6 +218,35 @@
             </div>
         </div>
 
+        <!-- Warning if kategori_pelanggan_id is empty -->
+        <div x-show="!kategori_pelanggan_id" 
+             class="mt-4 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg shadow-sm"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform -translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0">
+            <div class="flex items-start gap-3">
+                <svg class="w-6 h-6 text-amber-600 flex-shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div class="flex-1">
+                    <h3 class="text-amber-900 font-semibold mb-1 flex items-center gap-2">
+                        Perhatian: Kategori Pelanggan Belum Diisi
+                    </h3>
+                    <p class="text-amber-800 text-sm mb-2">
+                        Anda tidak dapat membuat tiket support baru hingga <strong>Kategori Pelanggan</strong> dipilih. 
+                        Silakan klik tombol <strong>"Edit Profile"</strong> dan pilih kategori yang sesuai.
+                    </p>
+                    <button @click="isLocked = false; setTimeout(() => document.querySelector('[x-model=\'kategori_pelanggan_id\']').focus(), 100)" 
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Isi Kategori Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Info Box -->
         <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div class="flex items-start gap-3">
@@ -218,9 +256,9 @@
                 <div class="text-sm text-blue-800">
                     <p class="font-semibold mb-1">Informasi Penting</p>
                     <ul class="list-disc list-inside space-y-1 text-blue-700">
+                        <li><strong>Kategori Pelanggan wajib diisi</strong> sebelum membuat tiket support</li>
                         <li>Data profile digunakan untuk identifikasi tiket support</li>
                         <li>Kategori pelanggan mempengaruhi prioritas penanganan tiket</li>
-                        <li>Pastikan email dan nomor telepon aktif untuk notifikasi</li>
                     </ul>
                 </div>
             </div>
@@ -242,13 +280,63 @@
             errors: {},
             isLocked: true,
 
+            init() {
+                // Check for flash messages from redirect
+                const successMsg = @js(session('success'));
+                const errorMsg = @js(session('error'));
+                
+                if (successMsg) {
+                    this.showStatus(successMsg, 'success');
+                }
+                
+                if (errorMsg) {
+                    this.showStatus(errorMsg, 'error');
+                    this.isLocked = false; // Auto unlock if there's an error from redirect
+                    
+                    // Highlight kategori pelanggan field if error mentions it
+                    if (errorMsg.toLowerCase().includes('kategori pelanggan')) {
+                        setTimeout(() => {
+                            const kategoriField = document.querySelector('[x-model="kategori_pelanggan_id"]');
+                            if (kategoriField) {
+                                kategoriField.focus();
+                                kategoriField.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+                            }
+                        }, 100);
+                    }
+                }
+            },
+
             toggleLock() {
                 this.isLocked = !this.isLocked;
                 this.statusMessage = '';
                 this.errors = {};
+                
+                // Remove highlight from kategori pelanggan field when canceling
+                if (this.isLocked) {
+                    const kategoriField = document.querySelector('[x-model="kategori_pelanggan_id"]');
+                    if (kategoriField) {
+                        kategoriField.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
+                    }
+                }
             },
 
             saveProfile() {
+                // Validate required fields
+                if (!this.kategori_pelanggan_id) {
+                    this.errors.kategori_pelanggan_id = 'Kategori Pelanggan wajib dipilih';
+                    this.showStatus('Kategori Pelanggan harus diisi sebelum menyimpan', 'error');
+                    
+                    // Focus on kategori pelanggan field
+                    setTimeout(() => {
+                        const kategoriField = document.querySelector('[x-model="kategori_pelanggan_id"]');
+                        if (kategoriField) {
+                            kategoriField.focus();
+                            kategoriField.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+                        }
+                    }, 100);
+                    return;
+                }
+
                 const tokenMeta = document.querySelector('meta[name="csrf-token"]');
                 if (!tokenMeta) {
                     this.showStatus('Error: CSRF Token tidak ditemukan', 'error');
@@ -281,14 +369,31 @@
                     return data;
                 })
                 .then(data => {
-                    this.showStatus('Profile berhasil diperbarui!', 'success');
-                    this.isLocked = true; 
+                    this.showStatus('Profile berhasil diperbarui! Anda sekarang dapat membuat tiket support.', 'success');
+                    this.isLocked = true;
+                    
+                    // Remove highlight from kategori field after successful save
+                    const kategoriField = document.querySelector('[x-model="kategori_pelanggan_id"]');
+                    if (kategoriField) {
+                        kategoriField.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
+                    }
                 })
                 .catch(err => {
                     let msg = 'Gagal menyimpan perubahan';
                     if (err.errors) {
                         this.errors = err.errors;
                         msg = 'Periksa kembali data yang Anda masukkan';
+                        
+                        // Highlight kategori pelanggan if there's an error on it
+                        if (err.errors.kategori_pelanggan_id) {
+                            setTimeout(() => {
+                                const kategoriField = document.querySelector('[x-model="kategori_pelanggan_id"]');
+                                if (kategoriField) {
+                                    kategoriField.focus();
+                                    kategoriField.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+                                }
+                            }, 100);
+                        }
                     } else if (err.message) {
                         msg = err.message;
                     }

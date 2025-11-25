@@ -15,63 +15,74 @@
         <!-- Header Card -->
         <div class="card mb-6">
             <div class="card-header">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div class="flex-1">
-                        <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ $ticket->judul }}</h1>
-                        <div class="flex flex-wrap items-center gap-3">
-                            <!-- Status Badge -->
-                            @php
-                                $statusColors = [
-                                    'open' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'label' => 'Terbuka'],
-                                    'in_progress' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Diproses'],
-                                    'resolved' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'label' => 'Selesai'],
-                                    'closed' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'label' => 'Ditutup']
-                                ];
-                                $currentStatus = $statusColors[$ticket->status] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => ucfirst($ticket->status)];
-                            @endphp
-                            <span class="badge {{ $currentStatus['bg'] }} {{ $currentStatus['text'] }}">
-                                {{ $currentStatus['label'] }}
-                            </span>
-
-                            <!-- Priority Badge -->
-                            @if($ticket->prioritas)
-                                @php
-                                    $priorityColors = [
-                                        'low' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => 'Rendah'],
-                                        'medium' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'label' => 'Sedang'],
-                                        'high' => ['bg' => 'bg-orange-100', 'text' => 'text-orange-800', 'label' => 'Tinggi'],
-                                        'urgent' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'label' => 'Urgent']
-                                    ];
-                                    $currentPriority = $priorityColors[strtolower($ticket->prioritas)] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => $ticket->prioritas];
-                                @endphp
-                                <span class="badge {{ $currentPriority['bg'] }} {{ $currentPriority['text'] }} flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                    </svg>
-                                    Prioritas: {{ $currentPriority['label'] }}
-                                </span>
-                            @endif
-
-                            <!-- AI Badge if priority is set -->
-                            @if($ticket->prioritas)
-                                <span class="badge bg-purple-100 text-purple-800 flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                                    </svg>
-                                    AI Analyzed
-                                </span>
-                            @endif
-                        </div>
+                <div class="flex flex-col gap-4">
+                    <!-- Kode Tiket dengan Badge Besar -->
+                    <div class="inline-flex items-center gap-2 w-fit px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300">
+                        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                        </svg>
+                        <span class="text-xl font-bold font-mono text-gray-900">{{ $ticket->kode_tiket }}</span>
                     </div>
 
-                    <!-- Edit Button -->
-                    <a href="{{ route('tiket.edit', $ticket->id) }}" 
-                       class="btn btn-primary inline-flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                        Edit Tiket
-                    </a>
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="flex-1">
+                            <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ $ticket->judul }}</h1>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <!-- Status Badge -->
+                                @php
+                                    $statusColors = [
+                                        'Menunggu' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'label' => 'Menunggu'],
+                                        'Diproses' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Diproses'],
+                                        'Selesai' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'label' => 'Selesai'],
+                                    ];
+                                    $currentStatus = $statusColors[$ticket->status] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => $ticket->status];
+                                @endphp
+                                <span class="badge {{ $currentStatus['bg'] }} {{ $currentStatus['text'] }}">
+                                    {{ $currentStatus['label'] }}
+                                </span>
+
+                                <!-- Priority Badge -->
+                                @if($ticket->prioritas)
+                                    @php
+                                        $priorityColors = [
+                                            'Rendah' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => 'Rendah'],
+                                            'Sedang' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'label' => 'Sedang'],
+                                            'Tinggi' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'label' => 'Tinggi'],
+                                        ];
+                                        $currentPriority = $priorityColors[$ticket->prioritas] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => $ticket->prioritas];
+                                    @endphp
+                                    <span class="badge {{ $currentPriority['bg'] }} {{ $currentPriority['text'] }} flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                        Prioritas: {{ $currentPriority['label'] }}
+                                    </span>
+                                @endif
+
+                                <!-- AI Badge if priority is set -->
+                                @if($ticket->prioritas)
+                                    <span class="badge bg-purple-100 text-purple-800 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                        </svg>
+                                        AI Analyzed
+                                        @if($ticket->ml_confidence)
+                                            ({{ round($ticket->ml_confidence * 100, 1) }}%)
+                                        @endif
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Edit Button -->
+                        <a href="{{ route('tiket.edit', $ticket->id) }}" 
+                           class="btn btn-primary inline-flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Edit Tiket
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -114,7 +125,8 @@
                         </div>
                         <div>
                             <p class="text-sm text-gray-500">ID Tiket</p>
-                            <p class="font-semibold text-gray-900 font-mono">#{{ str_pad($ticket->id, 5, '0', STR_PAD_LEFT) }}</p>
+                            <p class="font-semibold text-gray-900 font-mono">{{ $ticket->kode_tiket }}</p>
+                            <p class="text-xs text-gray-500">#{{ $ticket->id }}</p>
                         </div>
                     </div>
                 </div>
@@ -130,10 +142,10 @@
                         </div>
                         <div>
                             <p class="text-lg font-semibold text-gray-900">
-                                {{ $ticket->kategoriGangguan->nama_gangguan ?? '-' }}
+                                {{ $ticket->kategori_gangguan_nama ?? '-' }}
                             </p>
-                            @if($ticket->kategoriGangguan && isset($ticket->kategoriGangguan->deskripsi))
-                            <p class="text-sm text-gray-600">{{ $ticket->kategoriGangguan->deskripsi }}</p>
+                            @if($ticket->kategori_pelanggan_nama)
+                            <p class="text-sm text-gray-600">Pelanggan: {{ $ticket->kategori_pelanggan_nama }}</p>
                             @endif
                         </div>
                     </div>
@@ -149,39 +161,38 @@
             </div>
         </div>
 
-        <!-- Timeline Section (Optional - if you have updates/comments) -->
-        @if(isset($ticket->updates) && $ticket->updates->count() > 0)
-        <div class="card">
+        <!-- ML Analysis Section (if available) -->
+        @if($ticket->ml_predicted_at)
+        <div class="card mb-6">
             <div class="card-header">
                 <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                     </svg>
-                    Riwayat Aktivitas
+                    Analisis AI
                 </h2>
             </div>
             <div class="card-body">
-                <div class="space-y-4">
-                    @foreach($ticket->updates as $update)
-                    <div class="flex gap-4">
-                        <div class="bg-primary-100 p-2 rounded-full h-fit">
-                            <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm text-gray-600">{{ $update->created_at->format('d M Y, H:i') }}</p>
-                            <p class="text-gray-900">{{ $update->message }}</p>
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <p class="text-sm text-gray-600 mb-1">Tingkat Keyakinan</p>
+                        <p class="text-2xl font-bold text-purple-600">
+                            {{ round($ticket->ml_confidence * 100, 1) }}%
+                        </p>
                     </div>
-                    @endforeach
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <p class="text-sm text-gray-600 mb-1">Dianalisis pada</p>
+                        <p class="text-lg font-semibold text-gray-900">
+                            {{ $ticket->ml_predicted_at ? \Carbon\Carbon::parse($ticket->ml_predicted_at)->format('d M Y, H:i') : '-' }}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
         @endif
 
         <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3 mt-6">
+        <div class="flex flex-col sm:flex-row gap-3">
             <a href="{{ route('tiket.index') }}" 
                class="btn btn-outline flex-1 sm:flex-none">
                 Kembali

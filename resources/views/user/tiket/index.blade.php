@@ -27,30 +27,40 @@
             @foreach ($tickets as $tiket)
             <div class="card hover:shadow-lg transition-shadow duration-200">
                 <div class="card-body">
-                    <!-- Status Badge -->
+                    <!-- Kode Tiket & Status Badge -->
                     <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <!-- Kode Tiket -->
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-mono font-semibold">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                                </svg>
+                                {{ $tiket->kode_tiket }}
+                            </span>
+                            
+                            @php
+                                $statusColors = [
+                                    'Menunggu' => 'badge-primary',
+                                    'Diproses' => 'badge-warning',
+                                    'Selesai' => 'badge-success',
+                                ];
+                            @endphp
+                            <span class="badge {{ $statusColors[$tiket->status] ?? 'badge-primary' }}">
+                                {{ $tiket->status }}
+                            </span>
+                        </div>
+                        
+                        <!-- Priority Badge -->
+                        @if($tiket->prioritas)
                         @php
-                            $statusColors = [
-                                'open' => 'badge-primary',
-                                'in_progress' => 'badge-warning',
-                                'resolved' => 'badge-success',
-                                'closed' => 'badge-danger'
-                            ];
-                            $statusLabels = [
-                                'open' => 'Terbuka',
-                                'in_progress' => 'Diproses',
-                                'resolved' => 'Selesai',
-                                'closed' => 'Ditutup'
+                            $priorityColors = [
+                                'Rendah' => 'badge-secondary',
+                                'Sedang' => 'badge-warning',
+                                'Tinggi' => 'badge-danger'
                             ];
                         @endphp
-                        <span class="badge {{ $statusColors[$tiket->status] ?? 'badge-primary' }}">
-                            {{ $statusLabels[$tiket->status] ?? ucfirst($tiket->status) }}
-                        </span>
-                        
-                        <!-- Priority Badge (if exists) -->
-                        @if(isset($tiket->priority))
-                        <span class="badge badge-warning text-xs">
-                            {{ strtoupper($tiket->priority) }}
+                        <span class="badge {{ $priorityColors[$tiket->prioritas] ?? 'badge-secondary' }} text-xs">
+                            {{ $tiket->prioritas }}
                         </span>
                         @endif
                     </div>
@@ -60,6 +70,16 @@
                         {{ $tiket->judul }}
                     </h3>
 
+                    <!-- Category -->
+                    @if($tiket->kategori_gangguan_nama)
+                    <div class="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                        <span>{{ $tiket->kategori_gangguan_nama }}</span>
+                    </div>
+                    @endif
+
                     <!-- Ticket Meta -->
                     <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,8 +88,8 @@
                         <span>{{ $tiket->created_at->diffForHumans() }}</span>
                     </div>
 
-                    <!-- Ticket Description Preview (if exists) -->
-                    @if(isset($tiket->deskripsi))
+                    <!-- Ticket Description Preview -->
+                    @if($tiket->deskripsi)
                     <p class="text-sm text-gray-600 mb-4 line-clamp-2">
                         {{ Str::limit($tiket->deskripsi, 100) }}
                     </p>
@@ -107,7 +127,7 @@
             @endforeach
         </div>
 
-        <!-- Pagination (if exists) -->
+        <!-- Pagination -->
         @if(method_exists($tickets, 'links'))
         <div class="mt-8">
             {{ $tickets->links() }}
@@ -138,11 +158,9 @@
              x-cloak
              class="fixed inset-0 z-50 overflow-y-auto" 
              style="display: none;">
-            <!-- Backdrop -->
             <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
                  @click="showDeleteModal = false"></div>
             
-            <!-- Modal -->
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div x-show="showDeleteModal"
                      x-transition:enter="transition ease-out duration-200"
@@ -153,14 +171,12 @@
                      x-transition:leave-end="opacity-0 scale-95"
                      class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative z-10">
                     
-                    <!-- Icon -->
                     <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
                         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
                     </div>
 
-                    <!-- Content -->
                     <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
                         Hapus Tiket?
                     </h3>
@@ -168,7 +184,6 @@
                         Apakah Anda yakin ingin menghapus tiket ini? Tindakan ini tidak dapat dibatalkan.
                     </p>
 
-                    <!-- Actions -->
                     <div class="flex gap-3">
                         <button @click="showDeleteModal = false" 
                                 class="flex-1 btn btn-outline">
@@ -194,11 +209,9 @@
              x-cloak
              class="fixed inset-0 z-50 overflow-y-auto"
              style="display: none;">
-            <!-- Backdrop -->
             <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
                  @click="showSuccessModal = false"></div>
             
-            <!-- Modal -->
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div x-show="showSuccessModal"
                      x-transition:enter="transition ease-out duration-200"
@@ -209,20 +222,17 @@
                      x-transition:leave-end="opacity-0 scale-95"
                      class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative z-10">
                     
-                    <!-- Icon -->
                     <div class="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full mb-4">
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                     </div>
 
-                    <!-- Content -->
                     <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
                         Berhasil!
                     </h3>
                     <p class="text-gray-600 text-center mb-6" x-text="successMessage"></p>
 
-                    <!-- Action -->
                     <button @click="showSuccessModal = false" 
                             class="w-full btn btn-success">
                         OK

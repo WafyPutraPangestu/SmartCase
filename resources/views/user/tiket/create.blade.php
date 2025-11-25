@@ -14,6 +14,13 @@
                  );
              },
              
+             get isNewCategory() {
+                 if (!this.searchQuery.trim()) return false;
+                 return !this.categories.some(cat => 
+                     cat.nama_gangguan.toLowerCase() === this.searchQuery.trim().toLowerCase()
+                 );
+             },
+             
              selectCategory(category) {
                  this.selectedCategory = category.id;
                  this.selectedCategoryName = category.nama_gangguan;
@@ -26,6 +33,20 @@
                  this.selectedCategoryName = '';
                  this.searchQuery = '';
                  this.showDropdown = true;
+             },
+             
+             handleInput() {
+                 this.showDropdown = true;
+                 const exact = this.categories.find(cat => 
+                     cat.nama_gangguan.toLowerCase() === this.searchQuery.trim().toLowerCase()
+                 );
+                 if (exact) {
+                     this.selectedCategory = exact.id;
+                     this.selectedCategoryName = exact.nama_gangguan;
+                 } else {
+                     this.selectedCategory = null;
+                     this.selectedCategoryName = '';
+                 }
              }
          }">
         
@@ -39,6 +60,59 @@
                 Kembali
             </a>
         </div>
+
+        <!-- Error Alert -->
+        @if(session('error'))
+        <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4" 
+             x-data="{ show: true }" 
+             x-show="show"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0">
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-sm font-medium text-red-800">Gagal Membuat Tiket</h3>
+                    <p class="text-sm text-red-700 mt-1">{{ session('error') }}</p>
+                </div>
+                <button type="button" @click="show = false" class="flex-shrink-0 text-red-500 hover:text-red-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        @endif
+
+        <!-- Success Alert -->
+        @if(session('success'))
+        <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4" 
+             x-data="{ show: true }" 
+             x-show="show"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm text-green-700">{{ session('success') }}</p>
+                </div>
+                <button type="button" @click="show = false" class="flex-shrink-0 text-green-500 hover:text-green-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        @endif
 
         <!-- Header -->
         <div class="mb-8">
@@ -63,10 +137,10 @@
                 <form action="{{ route('tiket.store') }}" method="POST" class="space-y-6">
                     @csrf
 
-                    <!-- Hidden Input for Selected Category -->
-                    <input type="hidden" name="kategori_gangguan_id" x-model="selectedCategory">
+                    <!-- Hidden Input: kirim kategori_gangguan (nama) -->
+                    <input type="hidden" name="kategori_gangguan" :value="searchQuery.trim()">
 
-                    <!-- Searchable Category Dropdown -->
+                    <!-- Searchable Category Input -->
                     <div>
                         <label class="form-label flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,17 +151,18 @@
                         </label>
                         
                         <div class="relative">
-                            <!-- Search Input -->
                             <div class="relative">
                                 <input 
                                     type="text" 
                                     x-model="searchQuery"
+                                    @input="handleInput()"
                                     @focus="showDropdown = true"
                                     @click="showDropdown = true"
-                                    placeholder="Cari atau pilih kategori gangguan..."
-                                    class="form-input pr-10"
-                                    :class="{ 'border-red-300': !selectedCategory && $el.closest('form').querySelector('button[type=submit]').classList.contains('was-validated') }"
+                                    placeholder="Ketik untuk mencari atau buat kategori baru..."
+                                    class="form-input pr-10 @error('kategori_gangguan') border-red-300 @enderror"
                                     autocomplete="off"
+                                    maxlength="30"
+                                    required
                                 >
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,23 +171,28 @@
                                 </div>
                             </div>
 
-                            <!-- Selected Category Badge -->
-                            <div x-show="selectedCategory" 
-                                 x-transition
-                                 class="mt-2 inline-flex items-center gap-2 bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span x-text="selectedCategoryName"></span>
-                                <button type="button" @click="clearSelection()" class="hover:text-primary-900">
+                            <!-- Status Badge -->
+                            <div class="mt-2" x-show="searchQuery.trim()">
+                                <!-- Kategori Existing -->
+                                <span x-show="!isNewCategory" 
+                                      class="inline-flex items-center gap-2 bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                </button>
+                                    Kategori tersedia
+                                </span>
+                                <!-- Kategori Baru -->
+                                <span x-show="isNewCategory" 
+                                      class="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Akan dibuat kategori baru
+                                </span>
                             </div>
 
                             <!-- Dropdown List -->
-                            <div x-show="showDropdown && !selectedCategory" 
+                            <div x-show="showDropdown && filteredCategories.length > 0" 
                                  @click.away="showDropdown = false"
                                  x-transition:enter="transition ease-out duration-200"
                                  x-transition:enter-start="opacity-0 scale-95"
@@ -123,7 +203,6 @@
                                  class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto"
                                  style="display: none;">
                                 
-                                <!-- Categories List -->
                                 <template x-for="category in filteredCategories" :key="category.id">
                                     <button 
                                         type="button"
@@ -142,19 +221,12 @@
                                         </div>
                                     </button>
                                 </template>
-
-                                <!-- No Results -->
-                                <div x-show="filteredCategories.length === 0" 
-                                     class="px-4 py-8 text-center text-gray-500">
-                                    <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    <p>Kategori tidak ditemukan</p>
-                                </div>
                             </div>
                         </div>
                         
-                        @error('kategori_gangguan_id')
+                        <p class="text-sm text-gray-500 mt-1">Pilih dari daftar atau ketik nama baru (maks 30 karakter)</p>
+                        
+                        @error('kategori_gangguan')
                             <span class="form-error">{{ $message }}</span>
                         @enderror
                     </div>
@@ -171,7 +243,7 @@
                         <input 
                             type="text" 
                             name="judul" 
-                            class="form-input" 
+                            class="form-input @error('judul') border-red-300 @enderror" 
                             placeholder="Contoh: Tidak bisa login ke sistem"
                             value="{{ old('judul') }}"
                             required
@@ -194,7 +266,7 @@
                         <textarea 
                             name="deskripsi" 
                             rows="6" 
-                            class="form-input"
+                            class="form-input @error('deskripsi') border-red-300 @enderror"
                             placeholder="Jelaskan masalah Anda secara detail. Semakin detail informasi yang Anda berikan, semakin akurat sistem AI dalam menentukan prioritas..."
                             required
                         >{{ old('deskripsi') }}</textarea>
