@@ -444,8 +444,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                         </svg>
-                                        <span class="text-sm font-medium text-warning-700">Low Confidence (<70%)<
-                                                /span>
+                                        <span class="text-sm font-medium text-warning-700">Low Confidence (&lt; 70%)</span>
                                     </div>
                                     <span class="text-lg font-bold text-warning-900"
                                         x-text="stats.ml_stats?.low_confidence || 0"></span>
@@ -478,38 +477,37 @@
 
 
     <script>
+        // 1. DEFINISIKAN VARIABEL CHART DI LUAR x-data
+        // Ini mencegah Alpine mencoba membuatnya reaktif (penyebab crash)
+        let chartInstances = {
+            trend: null,
+            status: null,
+            priority: null,
+            category: null
+        };
+    
         function dashboardApp() {
             return {
                 loading: true,
                 error: null,
                 period: '7',
-                stats: {
-                    totals: {},
-                    status: {},
-                    priority: {},
-                    recent_tickets: [],
-                    ml_stats: {},
-                    top_gangguan: [],
-                    recent_activity: {},
-                    trend: []
-                },
-                charts: {
-                    trend: null,
-                    status: null,
-                    priority: null,
-                    category: null
-                },
-
+                stats: {},
+                // HAPUS object 'charts' dari sini agar tidak dipantau Alpine
+    
                 async init() {
                     await this.loadStats();
-                    // Auto refresh every 30 seconds
-                    setInterval(() => this.loadStats(), 30000);
+                    
+                    // Auto refresh setiap 30 detik
+                    setInterval(() => {
+                        this.loadStats(true); 
+                    }, 30000);
                 },
-
-                async loadStats() {
-                    this.loading = true;
-                    this.error = null;
-
+    
+                async loadStats(silent = false) {
+                    if (!silent) this.loading = true;
+                    // Jangan reset error saat silent refresh agar UI tidak kaget
+                    if (!silent) this.error = null;
+    
                     try {
                         const response = await fetch(`/api/admin/stats?period=${this.period}`, {
                             headers: {
@@ -517,341 +515,212 @@
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
                         });
-
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-
+    
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
                         const result = await response.json();
-
+    
                         if (result.success) {
                             this.stats = result.data;
-                            // Update charts after data loaded with proper timing
-                            setTimeout(() => {
-                                this.renderCharts();
-                            }, 200);
+                            
+                            // Tunggu DOM siap, lalu update chart
+                            this.$nextTick(() => {
+                                this.updateCharts();
+                            });
                         } else {
                             this.error = result.message || 'Gagal memuat data';
                         }
                     } catch (error) {
                         console.error('Error loading stats:', error);
-                        this.error = 'Gagal memuat data dashboard. Silakan coba lagi.';
+                        if (!silent) this.error = 'Gagal memuat data dashboard.';
                     } finally {
                         this.loading = false;
                     }
                 },
-
-                renderCharts() {
-                    // Wait for DOM to be ready
-                    setTimeout(() => {
-                        // Destroy existing charts
-                        Object.values(this.charts).forEach(chart => {
-                            if (chart) chart.destroy();
-                        });
-
-                        // 1. Trend Chart (Line)
-                        this.renderTrendChart();
-
-                        // 2. Status Chart (Pie)
-                        this.renderStatusChart();
-
-                        // 3. Priority Chart (Bar)
-                        this.renderPriorityChart();
-
-                        // 4. Category Chart (Doughnut)
-                        this.renderCategoryChart();
-                    }, 100);
+    
+                updateCharts() {
+                    if (typeof Chart === 'undefined') return;
+    
+                    this.handleTrendChart();
+                    this.handleStatusChart();
+                    this.handlePriorityChart();
+                    this.handleCategoryChart();
                 },
-
-                renderTrendChart() {
+    
+                // --- 1. TREND CHART ---
+                handleTrendChart() {
                     const ctx = document.getElementById('trendChart');
-                    if (!ctx) {
-                        console.warn('Trend chart canvas not found');
-                        return;
-                    }
-
-                    const trendData = this.stats.trend || [];
-                    const labels = trendData.map(item => {
-                        const date = new Date(item.date);
-                        return date.toLocaleDateString('id-ID', {
-                            month: 'short',
-                            day: 'numeric'
-                        });
-                    });
-                    const data = trendData.map(item => item.total);
-
-                    this.charts.trend = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Jumlah Tiket',
-                                data: data,
-                                borderColor: 'rgb(59, 130, 246)',
-                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                tension: 0.4,
-                                fill: true,
-                                pointRadius: 4,
-                                pointHoverRadius: 6,
-                                pointBackgroundColor: 'rgb(59, 130, 246)',
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'top',
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                    padding: 12,
-                                    titleFont: {
-                                        size: 14
-                                    },
-                                    bodyFont: {
-                                        size: 13
-                                    }
-                                }
+                    if (!ctx) return;
+    
+                    const rawData = this.stats.trend || [];
+                    const labels = rawData.map(item => this.formatDate(item.date));
+                    const data = rawData.map(item => item.total);
+    
+                    // Gunakan variabel global chartInstances
+                    if (chartInstances.trend) {
+                        chartInstances.trend.data.labels = labels;
+                        chartInstances.trend.data.datasets[0].data = data;
+                        chartInstances.trend.update('none');
+                    } else {
+                        chartInstances.trend = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Jumlah Tiket',
+                                    data: data,
+                                    borderColor: 'rgb(59, 130, 246)',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    tension: 0.4,
+                                    fill: true,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6
+                                }]
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        stepSize: 1
-                                    },
-                                    grid: {
-                                        color: 'rgba(0, 0, 0, 0.05)'
-                                    }
-                                },
-                                x: {
-                                    grid: {
-                                        display: false
-                                    }
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                                    x: { grid: { display: false } }
                                 }
                             }
-                        }
-                    });
-                },
-
-                renderStatusChart() {
-                    const ctx = document.getElementById('statusChart');
-                    if (!ctx) {
-                        console.warn('Status chart canvas not found');
-                        return;
+                        });
                     }
-
-                    const statusData = this.stats.status || {};
-                    const labels = Object.keys(statusData);
-                    const data = Object.values(statusData);
-
+                },
+    
+                // --- 2. STATUS CHART ---
+                handleStatusChart() {
+                    const ctx = document.getElementById('statusChart');
+                    if (!ctx) return;
+    
+                    const rawData = this.stats.status || {};
+                    const labels = Object.keys(rawData);
+                    const data = Object.values(rawData);
+                    
                     const colors = {
                         'Menunggu': 'rgb(251, 191, 36)',
                         'Diproses': 'rgb(59, 130, 246)',
                         'Selesai': 'rgb(34, 197, 94)'
                     };
-
-                    const backgroundColors = labels.map(label => colors[label] || 'rgb(156, 163, 175)');
-
-                    this.charts.status = new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                data: data,
-                                backgroundColor: backgroundColors,
-                                borderWidth: 2,
-                                borderColor: '#fff'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        padding: 15,
-                                        font: {
-                                            size: 12
-                                        }
-                                    }
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                    padding: 12,
-                                    callbacks: {
-                                        label: function(context) {
-                                            const label = context.label || '';
-                                            const value = context.parsed || 0;
-                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = ((value / total) * 100).toFixed(1);
-                                            return `${label}: ${value} (${percentage}%)`;
-                                        }
-                                    }
-                                }
+                    const bgColors = labels.map(l => colors[l] || 'gray');
+    
+                    if (chartInstances.status) {
+                        chartInstances.status.data.labels = labels;
+                        chartInstances.status.data.datasets[0].data = data;
+                        chartInstances.status.data.datasets[0].backgroundColor = bgColors;
+                        chartInstances.status.update('none');
+                    } else {
+                        chartInstances.status = new Chart(ctx, {
+                            type: 'pie',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: data,
+                                    backgroundColor: bgColors,
+                                    borderWidth: 2,
+                                    borderColor: '#fff'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'bottom' } }
                             }
-                        }
-                    });
-                },
-
-                renderPriorityChart() {
-                    const ctx = document.getElementById('priorityChart');
-                    if (!ctx) {
-                        console.warn('Priority chart canvas not found');
-                        return;
+                        });
                     }
-
-                    const priorityData = this.stats.priority || {};
+                },
+    
+                // --- 3. PRIORITY CHART ---
+                handlePriorityChart() {
+                    const ctx = document.getElementById('priorityChart');
+                    if (!ctx) return;
+    
+                    const rawData = this.stats.priority || {};
                     const orderedLabels = ['Tinggi', 'Sedang', 'Rendah'];
-                    const labels = orderedLabels.filter(label => priorityData[label] !== undefined);
-                    const data = labels.map(label => priorityData[label] || 0);
-
+                    const data = orderedLabels.map(l => rawData[l] || 0);
+                    
                     const colors = {
                         'Tinggi': 'rgb(239, 68, 68)',
                         'Sedang': 'rgb(251, 191, 36)',
                         'Rendah': 'rgb(34, 197, 94)'
                     };
-
-                    const backgroundColors = labels.map(label => colors[label] || 'rgb(156, 163, 175)');
-
-                    this.charts.priority = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Jumlah Tiket',
-                                data: data,
-                                backgroundColor: backgroundColors,
-                                borderRadius: 8,
-                                borderWidth: 0
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                    padding: 12
-                                }
+                    const bgColors = orderedLabels.map(l => colors[l]);
+    
+                    if (chartInstances.priority) {
+                        chartInstances.priority.data.datasets[0].data = data;
+                        chartInstances.priority.update('none');
+                    } else {
+                        chartInstances.priority = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: orderedLabels,
+                                datasets: [{
+                                    label: 'Jumlah',
+                                    data: data,
+                                    backgroundColor: bgColors,
+                                    borderRadius: 6
+                                }]
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        stepSize: 1
-                                    },
-                                    grid: {
-                                        color: 'rgba(0, 0, 0, 0.05)'
-                                    }
-                                },
-                                x: {
-                                    grid: {
-                                        display: false
-                                    }
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                                    x: { grid: { display: false } }
                                 }
                             }
-                        }
-                    });
-                },
-
-                renderCategoryChart() {
-                    const ctx = document.getElementById('categoryChart');
-                    if (!ctx) {
-                        console.warn('Category chart canvas not found');
-                        return;
+                        });
                     }
-
-                    const categoryData = this.stats.top_gangguan || [];
-                    const labels = categoryData.map(item => item.kategori_gangguan_nama);
-                    const data = categoryData.map(item => item.total);
-
-                    // Generate random colors for categories
-                    const colors = [
-                        'rgb(59, 130, 246)',
-                        'rgb(16, 185, 129)',
-                        'rgb(251, 191, 36)',
-                        'rgb(239, 68, 68)',
-                        'rgb(168, 85, 247)',
-                        'rgb(236, 72, 153)',
-                        'rgb(20, 184, 166)',
-                        'rgb(251, 146, 60)'
+                },
+    
+                // --- 4. CATEGORY CHART ---
+                handleCategoryChart() {
+                    const ctx = document.getElementById('categoryChart');
+                    if (!ctx) return;
+    
+                    const rawData = this.stats.top_gangguan || [];
+                    const labels = rawData.map(i => i.kategori_gangguan_nama);
+                    const data = rawData.map(i => i.total);
+                    const palette = [
+                        'rgb(59, 130, 246)', 'rgb(16, 185, 129)', 'rgb(251, 191, 36)',
+                        'rgb(239, 68, 68)', 'rgb(168, 85, 247)'
                     ];
-
-                    this.charts.category = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                data: data,
-                                backgroundColor: colors.slice(0, labels.length),
-                                borderWidth: 2,
-                                borderColor: '#fff'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        padding: 15,
-                                        font: {
-                                            size: 11
-                                        },
-                                        generateLabels: function(chart) {
-                                            const data = chart.data;
-                                            if (data.labels.length && data.datasets.length) {
-                                                return data.labels.map((label, i) => {
-                                                    const value = data.datasets[0].data[i];
-                                                    return {
-                                                        text: label.length > 20 ? label.substring(0,
-                                                            20) + '...' : label,
-                                                        fillStyle: data.datasets[0].backgroundColor[i],
-                                                        hidden: false,
-                                                        index: i
-                                                    };
-                                                });
-                                            }
-                                            return [];
-                                        }
-                                    }
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                    padding: 12,
-                                    callbacks: {
-                                        label: function(context) {
-                                            const label = context.label || '';
-                                            const value = context.parsed || 0;
-                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = ((value / total) * 100).toFixed(1);
-                                            return `${label}: ${value} (${percentage}%)`;
-                                        }
-                                    }
+    
+                    if (chartInstances.category) {
+                        chartInstances.category.data.labels = labels;
+                        chartInstances.category.data.datasets[0].data = data;
+                        chartInstances.category.data.datasets[0].backgroundColor = palette.slice(0, labels.length);
+                        chartInstances.category.update('none');
+                    } else {
+                        chartInstances.category = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: data,
+                                    backgroundColor: palette.slice(0, labels.length),
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
                 },
-
+    
                 formatDate(dateString) {
                     if (!dateString) return '-';
                     const date = new Date(dateString);
                     return date.toLocaleDateString('id-ID', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        day: 'numeric', month: 'short'
                     });
                 }
             }

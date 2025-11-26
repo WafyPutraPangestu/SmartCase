@@ -59,50 +59,76 @@ class MLRetrainingService
      * 
      * @return void
      */
+   /**
+     * Export data: Gabungkan Base Dataset (1000 baris) + Data Database (Real)
+     */
+    /**
+     * Export data: Gabungkan Base Dataset (Resources) + Data Database
+     */
     private function exportAndRetrain(): void
     {
         try {
-            // Get all tickets with prioritas (confirmed by admin or ML)
-            $tickets = Ticket::with(['kategoriGangguan'])
+            // 1. Ambil Data Real dari Database
+            $dbTickets = Ticket::with(['kategoriGangguan'])
                 ->whereNotNull('prioritas')
                 ->whereNotNull('kategori_gangguan_nama')
                 ->whereNotNull('kategori_pelanggan_nama')
                 ->get();
 
-            if ($tickets->isEmpty()) {
-                Log::warning("No tickets available for retraining");
-                return;
+            Log::info("Mengambil {$dbTickets->count()} tiket baru dari database.");
+
+            // 2. Siapkan Penampung Konten
+            $finalContent = "";
+            
+            // 3. BACA DATA DUMMY/BASE (DARI FOLDER RESOURCES/DATA-ML) 
+            // ✅ INI BAGIAN YANG DIUBAH
+            $baseDatasetPath = resource_path('data-ml/training_data.csv');
+            
+            if (file_exists($baseDatasetPath)) {
+                $baseContent = file_get_contents($baseDatasetPath);
+                $finalContent = rtrim($baseContent);
+                Log::info("✅ Berhasil memuat base_dataset.csv dari resources/data-ml.");
+            } else {
+                // Fallback header
+                $finalContent = "judul,deskripsi,kategori_gangguan,kategori_pelanggan,waktu_lapor,prioritas";
+                Log::warning("⚠️ base_dataset.csv tidak ditemukan di resources/data-ml/!");
             }
 
-            Log::info("Exporting {$tickets->count()} tickets for retraining");
-
-            // Build CSV content
-            $csvContent = "judul,deskripsi,kategori_gangguan,kategori_pelanggan,waktu_lapor,prioritas\n";
-
-            foreach ($tickets as $ticket) {
-                $csvContent .= $this->escapeCSV($ticket->judul) . ","
-                    . $this->escapeCSV($ticket->deskripsi) . ","
-                    . $this->escapeCSV($ticket->kategori_gangguan_nama) . ","
-                    . $this->escapeCSV($ticket->kategori_pelanggan_nama) . ","
-                    . $ticket->created_at->format('Y-m-d H:i:s') . ","
-                    . $ticket->prioritas . "\n";
+            // 4. GABUNGKAN dengan Data Database
+            if ($dbTickets->isNotEmpty()) {
+                $finalContent .= "\n"; 
+                
+                foreach ($dbTickets as $index => $ticket) {
+                    $row = $this->escapeCSV($ticket->judul) . ","
+                        . $this->escapeCSV($ticket->deskripsi) . ","
+                        . $this->escapeCSV($ticket->kategori_gangguan_nama) . ","
+                        . $this->escapeCSV($ticket->kategori_pelanggan_nama) . ","
+                        . $ticket->created_at->format('Y-m-d H:i:s') . ","
+                        . $ticket->prioritas;
+                    
+                    if ($index < $dbTickets->count() - 1) {
+                        $row .= "\n";
+                    }
+                    
+                    $finalContent .= $row;
+                }
             }
 
-            // Save CSV to storage
-            $csvPath = storage_path('app/ml_training_data.csv');
-            file_put_contents($csvPath, $csvContent);
+            // 5. SIMPAN HASIL GABUNGAN KE STORAGE (Untuk dikirim ke Python)
+            // File ini sifatnya sementara/generated, jadi tetap di storage
+            $targetCsvPath = storage_path('app/ml_training_data.csv');
+            file_put_contents($targetCsvPath, $finalContent);
 
-            Log::info("CSV exported to: {$csvPath}");
+            Log::info("CSV Final berhasil dibuat. Siap dikirim ke Python.");
 
-            // Copy to ML service dataset folder
-            $this->copyToMLDataset($csvPath);
+            // 6. COPY ke Folder Python
+            $this->copyToMLDataset($targetCsvPath);
 
-            // Trigger retrain via API
+            // 7. Trigger API Retrain
             $this->triggerRetrain();
+
         } catch (\Exception $e) {
-            Log::error("Export & retrain failed: " . $e->getMessage(), [
-                'exception' => $e
-            ]);
+            Log::error("Export & retrain failed: " . $e->getMessage());
         }
     }
 
@@ -144,7 +170,7 @@ class MLRetrainingService
         // Sesuaikan dengan struktur folder kamu
         $mlDatasetPath = env('ML_DATASET_PATH');
         if (empty($mlDatasetPath)) {
-            Log::error("❌ ML_DATASET_PATH belum diatur di file .env");
+            Log::error(" ML_DATASET_PATH belum diatur di file .env");
             return;
         }
 
@@ -176,7 +202,7 @@ class MLRetrainingService
                 ->post("{$this->mlServiceUrl}/retrain");
 
             if ($response->successful()) {
-                Log::info("✅ ML retrain API called successfully", [
+                Log::info(" ML retrain API called successfully", [
                     'response' => $response->json()
                 ]);
             } else {
